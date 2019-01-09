@@ -20,7 +20,10 @@ router.get("/", (req, res) => {
 router.get("/:id", (req, res) => {
   const request = new sql.Request();
 
-  request.query(`SELECT * FROM doctors where id = ${req.params.id}`)
+  request.query(`SELECT name, speciality, image, text, c.id, rating, created from doctors d
+                INNER JOIN comments c
+                on d.id = c.doctorId
+                where d.id = ${req.params.id}`)
     .then(doctors => {
       res.json(doctors.recordset)
     })
