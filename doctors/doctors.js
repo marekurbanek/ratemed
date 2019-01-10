@@ -23,7 +23,7 @@ router.get("/:id", (req, res) => {
               LEFT JOIN comments c
               on d.id = c.doctorId
               where d.id = ${req.params.id}`
-  console.log(query)
+              
   request.query(query)
     .then(doctors => {
       res.json(doctors.recordset[0])
@@ -33,13 +33,25 @@ router.get("/:id", (req, res) => {
     })
 })
 
-router.post('/', function (req, res) {
+router.post('/', (req, res) => {
   const request = new sql.Request();
   const query = `INSERT INTO doctors (name, speciality, image) VALUES ('${req.body.name}', '${req.body.speciality}', '${req.body.image}')`;
 
   request.query(query)
-    .then(result => {
+    .then(() => {
       res.status(201).json({message: 'OK'})
+    })
+    .catch(err => {
+      console.log(err);
+    })
+})
+
+router.delete('/:id', (req, res) => {
+  const request = new sql.Request()
+  const query = `DELETE FROM doctors WHERE id=${req.params.id}`
+  request.query(query)
+    .then(() => {
+      res.status(201).json({message: 'Doctor removed'})
     })
     .catch(err => {
       console.log(err);
