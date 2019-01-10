@@ -38,8 +38,7 @@ router.post('/', function (req, res) {
 
   request.query(query)
     .then(result => {
-      res.send("new Doctor created");
-      console.log(result)
+      res.status(201).json({message: 'OK'})
     })
     .catch(err => {
       console.log(err);
