@@ -1,12 +1,12 @@
 const express = require("express")
-const sql = require("mssql/msnodesqlv8");
+const sql = require("mssql/msnodesqlv8")
 
 const router = express.Router({
   mergeParams: true
 })
 
 router.get("/:id", (req, res) => {
-  const request = new sql.Request();
+  const request = new sql.Request()
   const doctorId = req.params.id
 
   request.query(`SELECT * FROM comments where doctorId = ${doctorId}`)
@@ -14,23 +14,23 @@ router.get("/:id", (req, res) => {
       res.json(comments.recordset)
     })
     .catch(err => {
-      console.log(err);
+      console.log(err)
     })
 })
 
 
-// DOUBTS REGARDING METHOD WITH USING ID
-router.post("/:id", (req, res) => {
-  const request = new sql.Request();
-  const doctorId = req.params.id
-
-  request.query(`INSERT INTO comments (doctorId, text, rating) VALUES ('${doctorId}', '${req.body.text}', '${req.body.rating}')`)
+router.post("/", (req, res) => {
+  const request = new sql.Request()
+  console.log(req.body)
+  let rating = 5
+  
+  request.query(`INSERT INTO comments (doctorId, text, rating) VALUES ('${req.body.doctorId}', '${req.body.comment}', ${rating})`)
     .then(comments => {
       res.json(comments.recordset)
     })
     .catch(err => {
-      console.log(err);
+      console.log(err)
     })
 })
 
-module.exports = router;
+module.exports = router
