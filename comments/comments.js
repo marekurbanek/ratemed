@@ -21,10 +21,8 @@ router.get("/:id", (req, res) => {
 
 router.post("/", (req, res) => {
   const request = new sql.Request()
-  console.log(req.body)
-  let rating = 5
   
-  request.query(`INSERT INTO comments (doctorId, text, rating) VALUES ('${req.body.doctorId}', '${req.body.comment}', ${rating})`)
+  request.query(`INSERT INTO comments (doctorId, text, rating) VALUES ('${req.body.doctorId}', '${req.body.comment}', ${req.body.rating})`)
     .then(comments => {
       res.json(comments.recordset)
     })
