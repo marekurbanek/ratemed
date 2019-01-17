@@ -22,6 +22,7 @@ module.exports = {
         getUserIdByUsername(username)
           .then(userId => {
             req.userId = userId.recordset[0].id
+            req.username = username
             next()
           })
           .catch(err => {

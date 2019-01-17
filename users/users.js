@@ -51,4 +51,12 @@ router.post('/login', (req, res) => {
     })
 })
 
+router.get('/data', auth.verify, (req, res) => {
+  let user = {
+    username: req.username,
+    userId: req.userId
+  }
+  res.json(user)
+})
+
 module.exports = router
