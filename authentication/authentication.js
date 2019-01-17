@@ -1,28 +1,32 @@
 const fs = require('fs')
 const jwt = require('jsonwebtoken')
+const sql = require("mssql/msnodesqlv8")
 
 var privateKEY = fs.readFileSync('./authentication/keys/private.key', 'utf8')
 var publicKEY = fs.readFileSync('./authentication/keys/public.key', 'utf8')
 
+let options = {
+  expiresIn: '600000ms',
+  algorithm: "RS256"
+}
+
 module.exports = {
   sign: (payload) => {
-    let options = {
-      expiresIn: '600000ms',
-      algorithm:  "RS256"
-    }
     return jwt.sign(payload, privateKEY, options)
   },
   verify: (req, res, next) => {
-    let options = {
-      expiresIn: '600000ms',
-      algorithm:  ["RS256"]
-    }
     try {
       let token = req.headers['authorization']
-      if (token) {
-        if (jwt.verify(token, publicKEY, options)) {
-          next()
-        }
+      if (jwt.verify(token, publicKEY, options)) {
+        let username = jwt.verify(token, publicKEY, options).username
+        getUserIdByUsername(username)
+          .then(userId => {
+            req.userId = userId.recordset[0].id
+            next()
+          })
+          .catch(err => {
+            console.log(err)
+          })
       }
     } catch (err) {
       console.log(err)
@@ -36,4 +40,9 @@ module.exports = {
       complete: true
     })
   }
+}
+
+getUserIdByUsername = (username) => {
+  let request = new sql.Request()
+  return request.query(`SELECT id FROM USERS WHERE USERNAME = '${username}'`)
 }
