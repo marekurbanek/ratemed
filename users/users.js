@@ -1,52 +1,21 @@
 const express = require("express")
 const sql = require("mssql/msnodesqlv8")
 const bcrypt = require("bcrypt")
-const jwt = require("jsonwebtoken")
-const fs = require('fs')
-
-const privateKEY = fs.readFileSync('./users/private.key', 'utf8')
-const publicKEY = fs.readFileSync('./users/public.key', 'utf8')
-
-let i  = 'Mysoft corp';   
-let s  = 'some@user.com';   
-let a  = 'http://mysoftcorp.in';
-
-const signOptions = {
-  issuer:  i,
-  subject:  s,
-  audience:  a,
-  expiresIn:  "12h",
-  algorithm:  "RS256"
-}
+const auth = require("../authentication/authentication")
 
 const router = express.Router({
   mergeParams: true
 })
 
-router.post('/', (req, res) => {
-  const request = new sql.Request()
-  const query = `INSERT INTO users VALUES ('${req.body.username}', '${req.body.password}')`
-  request.query(query)
-    .then(() => {
-      const token = jwt.sign({}, privateKEY, signOptions);
-      res.json(token)
-    })
-    .catch(err => {
-      console.log(err)
-    })
-})
-
 router.post('/register', (req, res) => {
   const request = new sql.Request()
-
   bcrypt.hash(req.body.password, 10, (err, hash) => {
     if (!err) {
       const query = `INSERT INTO users VALUES ('${req.body.username}', '${hash}')`
-
       request.query(query)
-        .then(result => {
-          res.send("new user created")
-          console.log(result)
+        .then(() => {
+          let token = auth.sign({username: req.body.username})
+          res.json(token)
         })
         .catch(err => {
           console.log(err)
@@ -66,7 +35,8 @@ router.post('/login', (req, res) => {
       bcrypt.compare(req.body.password, hash)
         .then(result => {
           if (result) {
-            res.send("Password matches!")
+            let token = auth.sign({username: req.body.username})
+            res.json(token)
           } else {
             res.send("Password is incorrect!")
           }
@@ -79,6 +49,24 @@ router.post('/login', (req, res) => {
       console.log(err)
       res.send("User with thath username doesn't exist ")
     })
+})
+
+router.get("/", (req, res) => {
+  let token = auth.getTokenFromHeader(req)
+  if (token) {
+    let verified = auth.verify(token)
+    if (verified) {
+      const request = new sql.Request()
+      query = `SELECT * FROM users`
+      request.query(query)
+        .then(users => {
+          res.json(users)
+        })
+        .catch(err => {
+          console.log(err)
+        })
+    }
+  }
 })
 
 module.exports = router
