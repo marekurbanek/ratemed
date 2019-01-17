@@ -7,20 +7,29 @@ var publicKEY = fs.readFileSync('./authentication/keys/public.key', 'utf8')
 module.exports = {
   sign: (payload) => {
     let options = {
-      expiresIn: '600000ms'
+      expiresIn: '600000ms',
+      algorithm:  "RS256"
     }
     return jwt.sign(payload, privateKEY, options)
   },
-  verify: (token) => {
+  verify: (req, res, next) => {
+    let options = {
+      expiresIn: '600000ms',
+      algorithm:  ["RS256"]
+    }
     try {
-      return jwt.verify(token, publicKEY)
+      let token = req.headers['authorization']
+      if (token) {
+        if (jwt.verify(token, publicKEY, options)) {
+          next()
+        }
+      }
     } catch (err) {
       console.log(err)
-      return false
+      res.status(403).json({
+        error: "You are unauthorized to do this"
+      })
     }
-  },
-  getTokenFromHeader: (req) => {
-    return req.headers['authorization']
   },
   decode: (token) => {
     return jwt.decode(token, {

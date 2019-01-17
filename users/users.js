@@ -51,22 +51,4 @@ router.post('/login', (req, res) => {
     })
 })
 
-router.get("/", (req, res) => {
-  let token = auth.getTokenFromHeader(req)
-  if (token) {
-    let verified = auth.verify(token)
-    if (verified) {
-      const request = new sql.Request()
-      query = `SELECT * FROM users`
-      request.query(query)
-        .then(users => {
-          res.json(users)
-        })
-        .catch(err => {
-          console.log(err)
-        })
-    }
-  }
-})
-
 module.exports = router
