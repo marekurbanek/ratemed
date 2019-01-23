@@ -1,6 +1,7 @@
 const fs = require('fs')
 const jwt = require('jsonwebtoken')
-const sql = require("mssql/msnodesqlv8")
+
+const utils = require("../shared/utils")
 
 var privateKEY = fs.readFileSync('./authentication/keys/private.key', 'utf8')
 var publicKEY = fs.readFileSync('./authentication/keys/public.key', 'utf8')
@@ -19,7 +20,7 @@ module.exports = {
       let token = req.headers['authorization']
       if (jwt.verify(token, publicKEY, options)) {
         let username = jwt.verify(token, publicKEY, options).username
-        getUserIdByUsername(username)
+        utils.getUserIdByUsername(username)
           .then(userId => {
             req.userId = userId.recordset[0].id
             req.username = username
@@ -43,7 +44,3 @@ module.exports = {
   }
 }
 
-getUserIdByUsername = (username) => {
-  let request = new sql.Request()
-  return request.query(`SELECT id FROM USERS WHERE USERNAME = '${username}'`)
-}
