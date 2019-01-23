@@ -15,7 +15,7 @@ router.post('/register', (req, res) => {
       request.query(query)
         .then(() => {
           let token = auth.sign({username: req.body.username})
-          res.json(token)
+          res.json({token, expirationTime: getExpirationTimeFromToken(token) })
         })
         .catch(err => {
           console.log(err)
@@ -36,7 +36,7 @@ router.post('/login', (req, res) => {
         .then(result => {
           if (result) {
             let token = auth.sign({username: req.body.username})
-            res.json(token)
+            res.json({token, expirationTime: getExpirationTimeFromToken(token) })
           } else {
             res.send("Password is incorrect!")
           }
@@ -58,5 +58,10 @@ router.get('/data', auth.verify, (req, res) => {
   }
   res.json(user)
 })
+
+getExpirationTimeFromToken = (token) => {
+  let decodedToken = auth.decode(token)
+  return decodedToken.payload.exp - decodedToken.payload.iat
+}
 
 module.exports = router
