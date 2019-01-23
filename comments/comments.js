@@ -32,7 +32,7 @@ router.post('/', auth.verify, (req, res) => {
     })
 })
 
-router.delete('/:id', (req, res) => {
+router.delete('/:id', auth.verify, (req, res) => {
   const request = new sql.Request()
   
   request.query(`DELETE FROM comments WHERE id=${req.params.id}`)
