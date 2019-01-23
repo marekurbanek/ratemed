@@ -6,7 +6,7 @@ var privateKEY = fs.readFileSync('./authentication/keys/private.key', 'utf8')
 var publicKEY = fs.readFileSync('./authentication/keys/public.key', 'utf8')
 
 let options = {
-  expiresIn: '600000ms',
+  expiresIn: '36000000ms',
   algorithm: "RS256"
 }
 
