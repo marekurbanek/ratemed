@@ -32,8 +32,8 @@ module.exports = {
       }
     } catch (err) {
       console.log(err)
-      res.status(403).json({
-        error: "You are unauthorized to do this"
+      res.status(401).json({
+        errorMessage: "You have to be logged in to do this."
       })
     }
   },

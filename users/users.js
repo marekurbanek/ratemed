@@ -3,26 +3,36 @@ const sql = require("mssql/msnodesqlv8")
 const bcrypt = require("bcrypt")
 const auth = require("../authentication/authentication")
 const utils = require("../shared/utils")
+const helpers = require("./helpers")
 
 const router = express.Router({
   mergeParams: true
 })
 
-router.post('/register', (req, res) => {
-  // Should check if user exists
+router.post('/register', helpers.userExist, (req, res) => {
   const request = new sql.Request()
+  let username = req.body.username
   bcrypt.hash(req.body.password, 10, (err, hash) => {
     if (!err) {
-      let username = req.body.username
       const query = `INSERT INTO users VALUES ('${username}', '${hash}')`
       request.query(query)
         .then(() => {
           utils.getUserIdByUsername(username)
-          .then(result => {
-            let token = auth.sign({username})
-            let userId = result.recordset[0].id
-            res.json({token, expirationTime: getExpirationTimeFromToken(token), username, userId })
-          })
+            .then(result => {
+              let token = auth.sign({
+                username
+              })
+              let userId = result.recordset[0].id
+              res.json({
+                token,
+                expirationTime: helpers.getExpirationTimeFromToken(token),
+                username,
+                userId
+              })
+            })
+            .catch(err => {
+              console.log(err)
+            })
         })
         .catch(err => {
           console.log(err)
@@ -44,13 +54,20 @@ router.post('/login', (req, res) => {
         .then(result => {
           if (result) {
             utils.getUserIdByUsername(username)
-            .then(result => {
-              let token = auth.sign({username})
-              let userId = result.recordset[0].id
-              res.json({token, expirationTime: getExpirationTimeFromToken(token), username, userId })
-            })
+              .then(result => {
+                let token = auth.sign({
+                  username
+                })
+                let userId = result.recordset[0].id
+                res.json({
+                  token,
+                  expirationTime: helpers.getExpirationTimeFromToken(token),
+                  username,
+                  userId
+                })
+              })
           } else {
-            res.send("Password is incorrect!")
+            res.status(400).json({errorMessage: "Password is incorrect"})
           }
         })
         .catch(err => {
@@ -59,7 +76,7 @@ router.post('/login', (req, res) => {
     })
     .catch(err => {
       console.log(err)
-      res.send("User with thath username doesn't exist ")
+      res.status(400).json({errorMessage: "User with thath username doesn't exist"})
     })
 })
 
@@ -70,10 +87,5 @@ router.get('/data', auth.verify, (req, res) => {
   }
   res.json(user)
 })
-
-getExpirationTimeFromToken = (token) => {
-  let decodedToken = auth.decode(token)
-  return decodedToken.payload.exp - decodedToken.payload.iat
-}
 
 module.exports = router
