@@ -7,10 +7,11 @@ const router = express.Router({
 
 router.get("/", (req, res) => {
   const request = new sql.Request()
-  const query = `SELECT d.id, d.name, d.speciality, d.image, avg(c.rating) rating
+  const query = `SELECT d.id, d.name, s.speciality, d.image, avg(c.rating) rating
                 from doctors d
+                INNER JOIN specialities s on d.id = s.doctorId
                 LEFT JOIN comments c on d.id = c.doctorId
-                group by d.id, d.name, d.speciality, d.image`
+                group by d.id, d.name, s.speciality, d.image`
 
   request.query(query)
     .then(doctors => {
@@ -84,7 +85,7 @@ const createDoctorQuery = (req) => {
                   ( speciality, doctorId)
                 VALUES
                   ${values}
-                  
+
                 COMMIT TRAN
               END TRY
               BEGIN CATCH
