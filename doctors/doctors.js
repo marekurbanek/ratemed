@@ -1,12 +1,12 @@
 const express = require("express")
-const sql = require("mssql/msnodesqlv8");
+const sql = require("mssql/msnodesqlv8")
 
 const router = express.Router({
   mergeParams: true
 })
 
 router.get("/", (req, res) => {
-  const request = new sql.Request();
+  const request = new sql.Request()
   const query = `SELECT d.id, d.name, d.speciality, d.image, avg(c.rating) rating
                 from doctors d
                 LEFT JOIN comments c on d.id = c.doctorId
@@ -17,12 +17,12 @@ router.get("/", (req, res) => {
       res.json(doctors.recordset)
     })
     .catch(err => {
-      console.log(err);
+      console.log(err)
     })
 })
 
 router.get("/:id", (req, res) => {
-  const request = new sql.Request();
+  const request = new sql.Request()
   let query = `SELECT name, speciality, image, text, c.id, rating, created from doctors d
               LEFT JOIN comments c
               on d.id = c.doctorId
@@ -34,16 +34,15 @@ router.get("/:id", (req, res) => {
       res.json(doctors.recordset[0])
     })
     .catch(err => {
-      console.log(err);
+      console.log(err)
     })
 })
 
 router.post('/', (req, res) => {
-  const request = new sql.Request();
-  const query = `INSERT INTO doctors (name, speciality, image) VALUES ('${req.body.name}', '${req.body.speciality}', '${req.body.image}')`;
+  const request = new sql.Request()
 
-  request.query(query)
-    .then(() => {
+  request.query(createDoctorQuery(req))
+    .then((result) => {
       res.status(201).json({message: 'OK'})
     })
     .catch(err => {
@@ -59,9 +58,40 @@ router.delete('/:id', (req, res) => {
       res.status(201).json({message: 'Doctor removed'})
     })
     .catch(err => {
-      console.log(err);
+      console.log(err)
     })
 })
 
+const createDoctorQuery = (req) => {
+  const specialities = req.body.specialities
+  let values = ''
+  for (let i = 0; i < specialities.length; i++) {
+    if(i === specialities.length - 1) {
+      values = values + `('${specialities[i]}', @doctorId)`
+    } else {
+      values = values + `('${specialities[i]}', @doctorId),`
+    }
+  }
+  let query = `BEGIN TRY
+                BEGIN TRANSACTION
 
-module.exports = router;
+                Declare @doctorId int
+                INSERT INTO doctors (name) VALUES ('${req.body.name}')
+              
+                SELECT @doctorId = @@IDENTITY
+              
+                INSERT INTO specialities
+                  ( speciality, doctorId)
+                VALUES
+                  ${values}
+                  
+                COMMIT TRAN
+              END TRY
+              BEGIN CATCH
+                  IF @@TRANCOUNT > 0
+                      ROLLBACK TRAN
+              END CATCH `
+  return query
+}
+
+module.exports = router
