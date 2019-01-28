@@ -15,7 +15,7 @@ router.get("/", (req, res) => {
 
   request.query(query)
     .then(doctors => {
-      res.json(doctors.recordset)
+      res.json(transformDoctorsToSingleRecordWithSpecialitiesArray(doctors.recordset))
     })
     .catch(err => {
       console.log(err)
@@ -33,8 +33,7 @@ router.get("/:id", (req, res) => {
               
   request.query(query)
     .then(doctors => {
-      console.log(doctors)
-      res.json(doctors.recordset)
+      res.json(transformDoctorSpecialitiesToSingleRecord(doctors.recordset))
     })
     .catch(err => {
       console.log(err)
@@ -97,4 +96,36 @@ const createDoctorQuery = (req) => {
   return query
 }
 
+transformDoctorsToSingleRecordWithSpecialitiesArray = (doctors) => {
+  return addSpecialitiesToDoctors(getAllSpecialities(doctors), getDistinctDoctors(doctors, 'id'))
+}
+transformDoctorSpecialitiesToSingleRecord = (doctors) => {
+  return addSpecialitiesToDoctors(getAllSpecialities(doctors), getDistinctDoctors(doctors, 'id'))[0]
+}
+
+getDistinctDoctors = (myArr, prop) => {
+  return myArr.filter((obj, pos, arr) => arr.map(mapObj => mapObj[prop]).indexOf(obj[prop]) === pos);
+}
+
+getAllSpecialities = (specialities) => {
+  return specialities.map(doctor => {
+    return {
+      doctorId: doctor.id,
+      speciality: doctor.speciality
+    }
+  })
+}
+
+addSpecialitiesToDoctors = (specialities, distinctDoctors) => {
+  specialities.forEach(spec => {
+    let doctor = distinctDoctors.find( doctor => doctor.id === spec.doctorId)
+    if(typeof doctor.speciality === 'string') {
+      doctor.speciality = [`${spec.speciality}`]
+    } else {
+      doctor.speciality.push(spec.speciality)
+    }
+  })
+  return distinctDoctors
+}
+  
 module.exports = router
