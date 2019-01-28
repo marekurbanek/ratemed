@@ -24,15 +24,17 @@ router.get("/", (req, res) => {
 
 router.get("/:id", (req, res) => {
   const request = new sql.Request()
-  let query = `SELECT name, speciality, image, text, c.id, rating, created from doctors d
-              LEFT JOIN comments c
-              on d.id = c.doctorId
-              where d.id = ${req.params.id}`
+  let query = `SELECT d.id, d.name, s.speciality, d.image, avg(c.rating) rating
+              from doctors d
+              INNER JOIN specialities s on d.id = s.doctorId
+              LEFT JOIN comments c on d.id = c.doctorId
+              where d.id = ${req.params.id}
+              group by d.id, d.name, s.speciality, d.image`
               
   request.query(query)
     .then(doctors => {
       console.log(doctors)
-      res.json(doctors.recordset[0])
+      res.json(doctors.recordset)
     })
     .catch(err => {
       console.log(err)
