@@ -10,7 +10,12 @@ router.get('/:id', (req, res) => {
   const request = new sql.Request()
   const doctorId = req.params.id
 
-  request.query(`SELECT * FROM comments where doctorId = ${doctorId}`)
+  request.query(`
+    SELECT c.*, u.username FROM comments as c 
+    INNER JOIN users as u on c.userId = u.id
+    WHERE doctorId = ${doctorId} 
+    ORDER BY c.created desc
+    `)
     .then(comments => {
       res.json(comments.recordset)
     })
