@@ -1,6 +1,7 @@
 const express = require("express")
 const app = express()
 const bodyParser = require("body-parser")
+const fileUpload = require('express-fileupload');
 const cors = require("cors")
 
 const startConnection = require("./db")
@@ -21,6 +22,7 @@ app.use(bodyParser.urlencoded({
 app.use(bodyParser.json())
 app.use(cors(corsOptions))
 app.use(express.static(__dirname + '/public'))
+app.use(fileUpload())
 
 app.use("/users", usersRoutes)
 app.use("/doctors", doctorsRoutes)

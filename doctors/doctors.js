@@ -42,9 +42,10 @@ router.get("/:id", (req, res) => {
 
 router.post('/', (req, res) => {
   const request = new sql.Request()
+  const imageUrl = checkIfFileExistAndSave(req)
 
-  request.query(createDoctorQuery(req))
-    .then((result) => {
+  request.query(createDoctorQuery(req, imageUrl))
+    .then(() => {
       res.status(201).json({message: 'OK'})
     })
     .catch(err => {
@@ -64,8 +65,8 @@ router.delete('/:id', (req, res) => {
     })
 })
 
-const createDoctorQuery = (req) => {
-  const specialities = req.body.specialities
+const createDoctorQuery = (req, imageUrl) => {
+  const specialities = req.body.specialities.split(",");
   let values = ''
   for (let i = 0; i < specialities.length; i++) {
     if(i === specialities.length - 1) {
@@ -78,15 +79,15 @@ const createDoctorQuery = (req) => {
                 BEGIN TRANSACTION
 
                 Declare @doctorId int
-                INSERT INTO doctors (name) VALUES ('${req.body.name}')
+                INSERT INTO doctors (name, image) VALUES ('${req.body.name}', '${imageUrl}')
               
                 SELECT @doctorId = @@IDENTITY
               
                 INSERT INTO specialities
-                  ( speciality, doctorId)
+                  ( speciality, doctorId )
                 VALUES
                   ${values}
-
+                  
                 COMMIT TRAN
               END TRY
               BEGIN CATCH
@@ -127,5 +128,25 @@ addSpecialitiesToDoctors = (specialities, distinctDoctors) => {
   })
   return distinctDoctors
 }
-  
+
+checkIfFileExistAndSave = (req) => {
+  if(req.files) {
+    const image = req.files.profileImage
+    let uniqueImageUrl = generateRandomString()
+    image.mv(`./public/users/images/${uniqueImageUrl}.jpg`, (err) => {
+			if(err){
+        console.log("Saving image went wrong" + err)
+        return ''
+			} else {
+				return uniqueImageUrl
+			}
+    })
+    return uniqueImageUrl
+  } else {
+    return ''
+  }
+  function generateRandomString() {
+   return req.body.name + Math.random().toString(36).substring(7)
+  }
+}
 module.exports = router
