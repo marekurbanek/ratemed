@@ -132,7 +132,7 @@ addSpecialitiesToDoctors = (specialities, distinctDoctors) => {
 checkIfFileExistAndSave = (req) => {
   if(req.files) {
     const image = req.files.profileImage
-    let uniqueImageUrl = generateRandomString()
+    const uniqueImageUrl = generateRandomString()
     image.mv(`./public/users/images/${uniqueImageUrl}.jpg`, (err) => {
 			if(err){
         console.log("Saving image went wrong" + err)
@@ -146,7 +146,8 @@ checkIfFileExistAndSave = (req) => {
     return ''
   }
   function generateRandomString() {
-   return req.body.name + Math.random().toString(36).substring(7)
+    const doctorName = req.body.name.replace(/ /g, '_')
+    return doctorName + Math.random().toString(36).substring(7)
   }
 }
 module.exports = router
