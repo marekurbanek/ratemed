@@ -7,10 +7,6 @@ const Comment = db.define('comment', {
     primaryKey: true,
     autoIncrement: true
   },
-  author: {
-    type: Sequelize.STRING,
-    allowNull: false,
-  },
   text: {
     type: Sequelize.STRING,
     allowNull: false
