@@ -4,11 +4,17 @@ const bodyParser = require("body-parser")
 const fileUpload = require('express-fileupload');
 const cors = require("cors")
 
-const startConnection = require("./db")
 
-const usersRoutes = require("./users/users")
-const doctorsRoutes = require("./doctors/doctors")
-const commentsRoutes = require("./comments/comments")
+// const usersRoutes = require("./users/users")
+// const doctorsRoutes = require("./doctors/doctors")
+// const commentsRoutes = require("./comments/comments")
+
+const db = require("./db")
+// MODELS
+const Comment = require("./models/comment")
+const Doctor = require("./models/doctor")
+const Speciality = require("./models/speciality")
+const User = require("./models/user")
 
 const corsOptions = {
   origin: 'http://localhost:4200',
@@ -24,11 +30,17 @@ app.use(cors(corsOptions))
 app.use(express.static(__dirname + '/public'))
 app.use(fileUpload())
 
-app.use("/users", usersRoutes)
-app.use("/doctors", doctorsRoutes)
-app.use("/comments", commentsRoutes)
+// app.use("/users", usersRoutes)
+// app.use("/doctors", doctorsRoutes)
+// app.use("/comments", commentsRoutes)
 
 app.listen(5000, function () {
   console.log("Server is running..")
-  startConnection()
+
+  Comment.belongsTo(Doctor)
+  User.hasMany(Comment)
+  Doctor.belongsTo(User)
+  Speciality.belongsTo(Doctor)
+
+  db.sync({force: true})
 })
