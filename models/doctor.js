@@ -22,7 +22,7 @@ const Doctor = db.define('doctor', {
   description: {
     type: Sequelize.STRING,
   },
-  imageUrl: {
+  image: {
     type: Sequelize.STRING,
   }
 }, {
