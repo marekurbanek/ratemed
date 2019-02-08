@@ -1,21 +1,20 @@
 const express = require("express")
-const sql = require("mssql/msnodesqlv8")
+const Doctor = require("../models/doctor")
+const Speciality = require("../models/speciality")
+const Comment = require("../models/comment")
 
 const router = express.Router({
   mergeParams: true
 })
 
 router.get("/", (req, res) => {
-  const request = new sql.Request()
-  const query = `SELECT d.id, d.name, s.speciality, d.image, avg(c.rating) rating
-                from doctors d
-                INNER JOIN specialities s on d.id = s.doctorId
-                LEFT JOIN comments c on d.id = c.doctorId
-                group by d.id, d.name, s.speciality, d.image`
-
-  request.query(query)
+  Doctor.findAll({ include: [{model: Speciality, attributes: ['speciality']}, {model: Comment}]})
     .then(doctors => {
-      res.json(transformDoctorsToSingleRecordWithSpecialitiesArray(doctors.recordset))
+      doctors.forEach(doctor => {
+        doctor.dataValues.rating = getAverageRatingFromComments(doctor.dataValues.comments)
+        doctor.dataValues.comments = []
+      });
+      res.json(doctors)
     })
     .catch(err => {
       console.log(err)
@@ -23,17 +22,10 @@ router.get("/", (req, res) => {
 })
 
 router.get("/:id", (req, res) => {
-  const request = new sql.Request()
-  let query = `SELECT d.id, d.name, s.speciality, d.image, avg(c.rating) rating
-              from doctors d
-              INNER JOIN specialities s on d.id = s.doctorId
-              LEFT JOIN comments c on d.id = c.doctorId
-              where d.id = ${req.params.id}
-              group by d.id, d.name, s.speciality, d.image`
-              
-  request.query(query)
-    .then(doctors => {
-      res.json(transformDoctorSpecialitiesToSingleRecord(doctors.recordset))
+  Doctor.findOne({ where: {id: req.params.id}, include: [{model: Speciality}, {model: Comment}]})  
+    .then(doctor => {
+      doctor.dataValues.rating = getAverageRatingFromComments(doctor.dataValues.comments)
+      res.json(doctor)
     })
     .catch(err => {
       console.log(err)
@@ -41,113 +33,75 @@ router.get("/:id", (req, res) => {
 })
 
 router.post('/', (req, res) => {
-  const request = new sql.Request()
   const imageUrl = checkIfFileExistAndSave(req)
 
-  request.query(createDoctorQuery(req, imageUrl))
-    .then(() => {
-      res.status(201).json({message: 'OK'})
+  Doctor.create({
+    name: req.body.name,
+    image: imageUrl
     })
-    .catch(err => {
-      console.log(err);
+    .then(doctor => {
+      const specialities = req.body.specialities.split(",").map(spec => {
+        return {
+          speciality: spec,
+          doctorId: doctor.id
+        }
+      })
+      Speciality.bulkCreate(specialities)
+        .then(() => {
+          res.status(201).json({
+            message: 'OK'
+          })
+        })
+        .catch(err => {
+          console.log(err)
+        })
     })
 })
 
+
 router.delete('/:id', (req, res) => {
-  const request = new sql.Request()
-  const query = `DELETE FROM doctors WHERE id=${req.params.id}`
-  request.query(query)
-    .then(() => {
-      res.status(201).json({message: 'Doctor removed'})
+  Doctor.findById(req.params.id)
+    .then(doc => {
+      doc.destroy({ force: true })
+        .then(() => {
+          res.status(201).json({message: 'Doctor removed'})
+        })
     })
     .catch(err => {
       console.log(err)
     })
 })
 
-const createDoctorQuery = (req, imageUrl) => {
-  const specialities = req.body.specialities.split(",");
-  let values = ''
-  for (let i = 0; i < specialities.length; i++) {
-    if(i === specialities.length - 1) {
-      values = values + `('${specialities[i]}', @doctorId)`
-    } else {
-      values = values + `('${specialities[i]}', @doctorId),`
-    }
+getAverageRatingFromComments = (comments) => {
+  if (comments.length > 0) {
+    let ratings = comments.map(comment => comment.rating)
+    return ratings.reduce((p, c) => p + c, 0) / ratings.length
+  } else {
+    return null
   }
-  let query = `BEGIN TRY
-                BEGIN TRANSACTION
-
-                Declare @doctorId int
-                INSERT INTO doctors (name, image) VALUES ('${req.body.name}', '${imageUrl}')
-              
-                SELECT @doctorId = @@IDENTITY
-              
-                INSERT INTO specialities
-                  ( speciality, doctorId )
-                VALUES
-                  ${values}
-                  
-                COMMIT TRAN
-              END TRY
-              BEGIN CATCH
-                  IF @@TRANCOUNT > 0
-                      ROLLBACK TRAN
-              END CATCH `
-  return query
-}
-
-transformDoctorsToSingleRecordWithSpecialitiesArray = (doctors) => {
-  return addSpecialitiesToDoctors(getAllSpecialities(doctors), getDistinctDoctors(doctors, 'id'))
-}
-transformDoctorSpecialitiesToSingleRecord = (doctors) => {
-  return addSpecialitiesToDoctors(getAllSpecialities(doctors), getDistinctDoctors(doctors, 'id'))[0]
-}
-
-getDistinctDoctors = (myArr, prop) => {
-  return myArr.filter((obj, pos, arr) => arr.map(mapObj => mapObj[prop]).indexOf(obj[prop]) === pos);
-}
-
-getAllSpecialities = (specialities) => {
-  return specialities.map(doctor => {
-    return {
-      doctorId: doctor.id,
-      speciality: doctor.speciality
-    }
-  })
-}
-
-addSpecialitiesToDoctors = (specialities, distinctDoctors) => {
-  specialities.forEach(spec => {
-    let doctor = distinctDoctors.find( doctor => doctor.id === spec.doctorId)
-    if(typeof doctor.speciality === 'string') {
-      doctor.speciality = [`${spec.speciality}`]
-    } else {
-      doctor.speciality.push(spec.speciality)
-    }
-  })
-  return distinctDoctors
 }
 
 checkIfFileExistAndSave = (req) => {
-  if(req.files) {
+  if (req.files) {
     const image = req.files.profileImage
     const uniqueImageUrl = generateRandomString()
     image.mv(`./public/users/images/${uniqueImageUrl}.jpg`, (err) => {
-			if(err){
+      if (err) {
         console.log("Saving image went wrong" + err)
         return ''
-			} else {
-				return uniqueImageUrl
-			}
+      } else {
+        return uniqueImageUrl
+      }
     })
     return uniqueImageUrl
   } else {
     return ''
   }
-  function generateRandomString() {
-    const doctorName = req.body.name.replace(/ /g, '_')
-    return doctorName + Math.random().toString(36).substring(7)
-  }
 }
+
+function generateRandomString() {
+  const doctorName = req.body.name.replace(/ /g, '_')
+  return doctorName + Math.random().toString(36).substring(7)
+}
+
 module.exports = router

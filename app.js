@@ -6,7 +6,7 @@ const cors = require("cors")
 
 
 const usersRoutes = require("./users/users")
-// const doctorsRoutes = require("./doctors/doctors")
+const doctorsRoutes = require("./doctors/doctors")
 // const commentsRoutes = require("./comments/comments")
 
 const db = require("./db")
@@ -31,16 +31,16 @@ app.use(express.static(__dirname + '/public'))
 app.use(fileUpload())
 
 app.use("/users", usersRoutes)
-// app.use("/doctors", doctorsRoutes)
+app.use("/doctors", doctorsRoutes)
 // app.use("/comments", commentsRoutes)
 
 app.listen(5000, function () {
   console.log("Server is running..")
 
-  Comment.belongsTo(Doctor)
   User.hasMany(Comment)
   Doctor.belongsTo(User)
-  Speciality.belongsTo(Doctor)
+  Doctor.hasMany(Speciality)
+  Doctor.hasMany(Comment)
 
-  db.sync({force: true})
+  db.sync()
 })
