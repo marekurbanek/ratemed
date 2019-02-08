@@ -1,41 +1,41 @@
 const express = require("express")
-const sql = require("mssql/msnodesqlv8")
 const bcrypt = require("bcrypt")
 const auth = require("../authentication/authentication")
-const utils = require("../shared/utils")
 const helpers = require("./helpers")
+const User = require("../models/user")
 
 const router = express.Router({
   mergeParams: true
 })
 
-router.post('/register', helpers.userExist, (req, res) => {
-  const request = new sql.Request()
-  let username = req.body.username
+router.post('/register', (req, res) => {
   bcrypt.hash(req.body.password, 10, (err, hash) => {
     if (!err) {
-      const query = `INSERT INTO users VALUES ('${username}', '${hash}')`
-      request.query(query)
-        .then(() => {
-          utils.getUserIdByUsername(username)
-            .then(result => {
-              let token = auth.sign({
-                username
-              })
-              let userId = result.recordset[0].id
-              res.json({
-                token,
-                expirationTime: helpers.getExpirationTimeFromToken(token),
-                username,
-                userId
-              })
-            })
-            .catch(err => {
-              console.log(err)
-            })
+      User.findOrCreate({
+          where: {
+            username: req.body.username
+          },
+          defaults: {
+            username: req.body.username,
+            password: hash
+          }
         })
-        .catch(err => {
-          console.log(err)
+        .spread((user, created) => {
+          if (!created) {
+            res.status(400).json({
+              errorMessage: "User with that username allready exist."
+            })
+          } else {
+            let token = auth.sign({
+              username: user.username
+            })
+            res.json({
+              token,
+              expirationTime: helpers.getExpirationTimeFromToken(token),
+              username: user.username,
+              userId: user.id
+            })
+          }
         })
     } else {
       console.log(err)
@@ -44,39 +44,35 @@ router.post('/register', helpers.userExist, (req, res) => {
 })
 
 router.post('/login', (req, res) => {
-  const request = new sql.Request()
-  let username = req.body.username
-  getUserPasswordQuery = `SELECT password FROM users WHERE username = '${username}'`
-  request.query(getUserPasswordQuery)
+  User.findOne({
+      where: {
+        username: req.body.username
+      }
+    })
     .then(user => {
-      const hash = user.recordset[0].password
-      bcrypt.compare(req.body.password, hash)
+      bcrypt.compare(req.body.password, user.password)
         .then(result => {
           if (result) {
-            utils.getUserIdByUsername(username)
-              .then(result => {
-                let token = auth.sign({
-                  username
-                })
-                let userId = result.recordset[0].id
-                res.json({
-                  token,
-                  expirationTime: helpers.getExpirationTimeFromToken(token),
-                  username,
-                  userId
-                })
-              })
+            let token = auth.sign({
+              username: user.username
+            })
+            res.json({
+              token,
+              expirationTime: helpers.getExpirationTimeFromToken(token),
+              username: user.username,
+              userId: user.id
+            })
           } else {
-            res.status(400).json({errorMessage: "Password is incorrect"})
+            res.status(400).json({
+              errorMessage: "Password is incorrect"
+            })
           }
-        })
-        .catch(err => {
-          res.send("Upss... Something went wrong " + err)
         })
     })
     .catch(err => {
-      console.log(err)
-      res.status(400).json({errorMessage: "User with thath username doesn't exist"})
+      res.status(400).json({
+        errorMessage: "User with thath username doesn't exist"
+      })
     })
 })
 

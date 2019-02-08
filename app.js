@@ -5,7 +5,7 @@ const fileUpload = require('express-fileupload');
 const cors = require("cors")
 
 
-// const usersRoutes = require("./users/users")
+const usersRoutes = require("./users/users")
 // const doctorsRoutes = require("./doctors/doctors")
 // const commentsRoutes = require("./comments/comments")
 
@@ -30,7 +30,7 @@ app.use(cors(corsOptions))
 app.use(express.static(__dirname + '/public'))
 app.use(fileUpload())
 
-// app.use("/users", usersRoutes)
+app.use("/users", usersRoutes)
 // app.use("/doctors", doctorsRoutes)
 // app.use("/comments", commentsRoutes)
 
