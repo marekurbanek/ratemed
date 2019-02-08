@@ -1,17 +1,11 @@
-var sql = require("mssql/msnodesqlv8");
+const Sequelize = require('sequelize')
 
-var dbConfig = {
-  driver: 'msnodesqlv8',
-  connectionString: 'Driver={SQL Server Native Client 11.0};Server={localhost\\SQLExpress};Database={nodejs};Trusted_Connection={yes};'
-};
-
-module.exports = function startConnection() {
-  sql.connect(dbConfig, function (err) {
-    if (err) {
-      console.log("Error while connecting database :- " + err);
-      sql.close();
-    } else {
-      console.log("Connected succesfully")
-    }
-  });
+if (process.env.CLEARDB_DATABASE_URL) {
+  module.exports = new Sequelize(process.env.CLEARDB_DATABASE_URL)
+} else {
+  module.exports = new Sequelize('ratemed', 'root', 'admin', {
+    host: 'localhost',
+    dialect: 'mysql',
+    operatorsAliases: false
+  })
 }
