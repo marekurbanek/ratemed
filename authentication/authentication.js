@@ -32,7 +32,6 @@ module.exports = {
       }
     } catch (err) {
       console.log(err)
-      res.status(401).redirect('/login')
     }
   },
   decode: (token) => {

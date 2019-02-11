@@ -7,10 +7,9 @@ const cors = require("cors")
 
 const usersRoutes = require("./users/users")
 const doctorsRoutes = require("./doctors/doctors")
-// const commentsRoutes = require("./comments/comments")
+const commentsRoutes = require("./comments/comments")
 
 const db = require("./db")
-// MODELS
 const Comment = require("./models/comment")
 const Doctor = require("./models/doctor")
 const Speciality = require("./models/speciality")
@@ -32,12 +31,13 @@ app.use(fileUpload())
 
 app.use("/users", usersRoutes)
 app.use("/doctors", doctorsRoutes)
-// app.use("/comments", commentsRoutes)
+app.use("/comments", commentsRoutes)
 
 app.listen(5000, function () {
   console.log("Server is running..")
 
   User.hasMany(Comment)
+  Comment.belongsTo(User)
   Doctor.belongsTo(User)
   Doctor.hasMany(Speciality)
   Doctor.hasMany(Comment)

@@ -1,43 +1,37 @@
 const express = require('express')
-const sql = require('mssql/msnodesqlv8')
 const auth = require('../authentication/authentication')
+const Comment = require('../models/comment')
+const db = require('../db')
 
 const router = express.Router({
   mergeParams: true
 })
 
 router.get('/latest', (req, res) => {
-  const request = new sql.Request()
-
-  request.query(`
-      SELECT a.doctorId, a.text
-      FROM comments a
-      LEFT OUTER JOIN comments b
-      ON a.doctorId = b.doctorId 
-      AND a.created < b.created
-      WHERE b.doctorId IS NULL
-      ORDER BY a.created desc
-    `)
-    .then(comments => {
-      res.json(comments.recordset)
-    })
-    .catch(err => {
-      console.log(err)
-    })
+  db.query(`
+    select id, text, rating, t1.doctorId, userId, createdAt
+    from comments t1
+    inner join
+    (
+      select max(createdAt) mxdate, doctorId
+      from comments
+      group by doctorId
+    ) t2
+      on t1.doctorId = t2.doctorId
+      and t1.createdAt = t2.mxdate
+  `).spread((results, metadata) => {
+    res.json(metadata)
+  })
 })
 
 router.get('/:id', (req, res) => {
-  const request = new sql.Request()
-  const doctorId = req.params.id
-
-  request.query(`
-      SELECT c.*, u.username FROM comments as c 
-      INNER JOIN users as u on c.userId = u.id
-      WHERE doctorId = ${doctorId} 
-      ORDER BY c.created desc
-    `)
+  Comment.findAll({
+      where: {
+        doctorId: req.params.id
+      }
+    })
     .then(comments => {
-      res.json(comments.recordset)
+      res.json(comments)
     })
     .catch(err => {
       console.log(err)
@@ -46,11 +40,14 @@ router.get('/:id', (req, res) => {
 
 
 router.post('/', auth.verify, (req, res) => {
-  const request = new sql.Request()
-  
-  request.query(`INSERT INTO comments (doctorId, userId, text, rating) VALUES ('${req.body.doctorId}', ${req.userId}, '${req.body.comment}', ${req.body.rating})`)
-    .then(comments => {
-      res.json(comments.recordset)
+  Comment.create({
+      doctorId: req.body.doctorId,
+      userId: req.userId,
+      text: req.body.comment,
+      rating: req.body.rating
+    })
+    .then(() => {
+      res.status(201).json({message: 'Comment added'})
     })
     .catch(err => {
       console.log(err)
@@ -58,11 +55,16 @@ router.post('/', auth.verify, (req, res) => {
 })
 
 router.delete('/:id', auth.verify, (req, res) => {
-  const request = new sql.Request()
-  
-  request.query(`DELETE FROM comments WHERE id=${req.params.id}`)
-    .then(comments => {
-      res.json(comments.recordset)
+  Comment.findById(req.params.id)
+    .then(comment => {
+      comment.destroy({
+          force: true
+        })
+        .then(() => {
+          res.status(201).json({
+            message: 'Doctor removed'
+          })
+        })
     })
     .catch(err => {
       console.log(err)

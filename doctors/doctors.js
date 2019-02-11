@@ -2,13 +2,21 @@ const express = require("express")
 const Doctor = require("../models/doctor")
 const Speciality = require("../models/speciality")
 const Comment = require("../models/comment")
+const User = require("../models/user")
 
 const router = express.Router({
   mergeParams: true
 })
 
 router.get("/", (req, res) => {
-  Doctor.findAll({ include: [{model: Speciality, attributes: ['speciality']}, {model: Comment}]})
+  Doctor.findAll({
+      include: [{
+        model: Speciality,
+        attributes: ['speciality']
+      }, {
+        model: Comment
+      }]
+    })
     .then(doctors => {
       doctors.forEach(doctor => {
         doctor.dataValues.rating = getAverageRatingFromComments(doctor.dataValues.comments)
@@ -22,7 +30,23 @@ router.get("/", (req, res) => {
 })
 
 router.get("/:id", (req, res) => {
-  Doctor.findOne({ where: {id: req.params.id}, include: [{model: Speciality}, {model: Comment}]})  
+  Doctor.findOne({
+      where: {
+        id: req.params.id
+      },
+      include: [{
+        model: Speciality
+      }, {
+        model: Comment,
+        order: [
+          ['createdAt', 'DESC']
+        ],
+        include: [{
+          model: User,
+          attributes: ['username', 'id']
+        }]
+      }]
+    })
     .then(doctor => {
       doctor.dataValues.rating = getAverageRatingFromComments(doctor.dataValues.comments)
       res.json(doctor)
@@ -36,8 +60,8 @@ router.post('/', (req, res) => {
   const imageUrl = checkIfFileExistAndSave(req)
 
   Doctor.create({
-    name: req.body.name,
-    image: imageUrl
+      name: req.body.name,
+      image: imageUrl
     })
     .then(doctor => {
       const specialities = req.body.specialities.split(",").map(spec => {
@@ -62,9 +86,13 @@ router.post('/', (req, res) => {
 router.delete('/:id', (req, res) => {
   Doctor.findById(req.params.id)
     .then(doc => {
-      doc.destroy({ force: true })
+      doc.destroy({
+          force: true
+        })
         .then(() => {
-          res.status(201).json({message: 'Doctor removed'})
+          res.status(201).json({
+            message: 'Doctor removed'
+          })
         })
     })
     .catch(err => {
